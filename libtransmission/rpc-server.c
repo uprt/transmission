@@ -714,32 +714,29 @@ static void handle_request(struct evhttp_request* req, void* arg)
             tr_free(tmp);
         }
 
-#ifdef REQUIRE_SESSION_ID
-
-        else if (!test_session_id(server, req))
-        {
-            char const* sessionId = get_current_session_id(server);
-            char* tmp = tr_strdup_printf(
-                "<p>Your request had an invalid session-id header.</p>"
-                "<p>To fix this, follow these steps:"
-                "<ol><li> When reading a response, get its X-Transmission-Session-Id header and remember it"
-                "<li> Add the updated header to your outgoing requests"
-                "<li> When you get this 409 error message, resend your request with the updated header"
-                "</ol></p>"
-                "<p>This requirement has been added to help prevent "
-                "<a href=\"https://en.wikipedia.org/wiki/Cross-site_request_forgery\">CSRF</a> "
-                "attacks.</p>"
-                "<p><code>%s: %s</code></p>",
-                TR_RPC_SESSION_ID_HEADER, sessionId);
-            evhttp_add_header(req->output_headers, TR_RPC_SESSION_ID_HEADER, sessionId);
-            send_simple_response(req, 409, tmp);
-            tr_free(tmp);
-        }
-
-#endif
-
         else if (strncmp(req->uri + strlen(server->url), "rpc", 3) == 0)
         {
+            #ifdef REQUIRE_SESSION_ID
+            if (!test_session_id(server, req))
+            {
+                char const* sessionId = get_current_session_id(server);
+                char* tmp = tr_strdup_printf(
+                    "<p>Your request had an invalid session-id header.</p>"
+                    "<p>To fix this, follow these steps:"
+                    "<ol><li> When reading a response, get its X-Transmission-Session-Id header and remember it"
+                    "<li> Add the updated header to your outgoing requests"
+                    "<li> When you get this 409 error message, resend your request with the updated header"
+                    "</ol></p>"
+                    "<p>This requirement has been added to help prevent "
+                    "<a href=\"https://en.wikipedia.org/wiki/Cross-site_request_forgery\">CSRF</a> "
+                    "attacks.</p>"
+                    "<p><code>%s: %s</code></p>",
+                    TR_RPC_SESSION_ID_HEADER, sessionId);
+                evhttp_add_header(req->output_headers, TR_RPC_SESSION_ID_HEADER, sessionId);
+                send_simple_response(req, 409, tmp);
+                tr_free(tmp);
+            } else
+            #endif
             handle_rpc(req, server);
         }
         else
